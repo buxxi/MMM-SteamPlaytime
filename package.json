@@ -1,0 +1,10 @@
+{
+    "name": "mmm-steamplaytime",
+    "version": "1.0.0",
+    "description": "A module for Magic Mirror that displays previous days playtime for a user on steam",
+    "dependencies": {
+      "moment" : "^2.24.0",
+      "request": "^2.81.0"
+    }
+  }
+  

@@ -1,0 +1,16 @@
+<table class="small">
+{% for date,games in playtime %}
+<tr>
+	<td class="day">
+		{{formatDay(date)}}
+	</td>
+	{% for appid, app in games %}
+	<td class="playtime">
+		<img src="{{app.icon}}"/> {{formatTime(app.time)}}
+	</td>
+	{% else %}
+	<td class="dimmed">{{emptyText}}</td>
+	{% endfor %}
+</tr>
+{% endfor %}
+</table>

@@ -1,0 +1,12 @@
+.MMM-SteamPlaytime .playtime img {
+    float: left;
+    margin: 0 0.25em 0 0;
+    width : 32px;
+    height : 32px;
+    border-radius: 3px; /* To get rid of that white corner pixels */
+}
+
+.MMM-SteamPlaytime .playtime, .MMM-SteamPlaytime .dimmed {
+    line-height: 32px;
+    padding-left: 0.5em;
+}
