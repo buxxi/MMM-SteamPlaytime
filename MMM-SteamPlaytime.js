@@ -37,7 +37,7 @@ Module.register("MMM-SteamPlaytime",{
 		return {
 			formatDay: self.formatDay,
 			formatTime: self.formatTime,
-			playtime: self.data.playtime,
+			playtime: self.templateData.playtime,
 			emptyText: self.config.emptyText
 		}
 	},
@@ -45,7 +45,7 @@ Module.register("MMM-SteamPlaytime",{
 	socketNotificationReceived: function (notification, payload) {
 		var self = this;
 		if (notification == "PLAYTIME" && payload.steamId == self.config.steamId) {
-			self.data = payload;
+			self.templateData = payload;
 			self.updateDom();
 		} else if (notification == "PLAYTIME_UPDATE_ERROR") {
 			this.sendNotification("SHOW_ALERT", { 
