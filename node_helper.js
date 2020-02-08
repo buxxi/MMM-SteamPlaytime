@@ -21,12 +21,12 @@ module.exports = NodeHelper.create({
 				}
 
 				var callback = function() {
-					self.updateData(dataFolder, payload.apiKey, payload.steamId);
+					self.updateData(dataFolder, payload.apiKey, payload.steamId).then(() => {
+						let data = self.loadCachedData(dataFolder);
 
-					var data = self.loadCachedData(dataFolder);
-					self.sendResult(data, payload.steamId, payload.displayCount);
-
-					self.scheduleNextUpdate(payload.updateTime, callback);
+						self.sendResult(data, payload.steamId, payload.displayCount);
+						self.scheduleNextUpdate(payload.updateTime, callback);
+					});
 				};
 				self.scheduleNextUpdate(payload.updateTime, callback);
 
@@ -97,7 +97,7 @@ module.exports = NodeHelper.create({
 
 	updateData: function(dataFolder, apiKey, steamId) {
 		let self = this;
-		fetch("http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key=" + apiKey + "&steamid=" + steamId + "&format=json",
+		return fetch("http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key=" + apiKey + "&steamid=" + steamId + "&format=json",
 			{
 			method : "GET",
 			headers : {
