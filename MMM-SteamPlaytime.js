@@ -10,6 +10,7 @@ Module.register("MMM-SteamPlaytime",{
 
 	start: function() {
 		var self = this;
+		self.templateData = {};
 
 		moment.locale(self.config.language);
 
