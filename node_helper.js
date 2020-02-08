@@ -1,5 +1,5 @@
 const NodeHelper = require("node_helper");
-const request = require("request");
+const fetch = require("node-fetch");
 const moment = require("moment");
 const path = require("path");
 const fs = require("fs");
@@ -96,32 +96,33 @@ module.exports = NodeHelper.create({
 	},
 
 	updateData: function(dataFolder, apiKey, steamId) {
-		var self = this;
-		request({
-			url : "http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key=" + apiKey + "&steamid=" + steamId + "&format=json",
+		let self = this;
+		fetch("http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key=" + apiKey + "&steamid=" + steamId + "&format=json",
+			{
 			method : "GET",
-			gzip : true,
 			headers : {
 				"User-Agent" : "MagicMirror/MMM-SteamPlaytime/1.0; (https://github.com/buxxi/MMM-SteamPlaytime)"
 			}
-		}, function(error, response, body) {
-			if (!error && response.statusCode == 200) {
-				var forDate = self.key(moment().subtract(1, 'days'));
-				var fileName = forDate + ".json";
-				
-				var data = JSON.parse(body);
-				data.date = forDate;
-
-				fs.writeFile(path.resolve(dataFolder, fileName), JSON.stringify(data), function(err) {
-					if (err) {
-						self.sendSocketNotification("PLAYTIME_UPDATE_ERROR", "Could not write file " + path.resolve(dataFolder, fileName));						
-					} else {
-						console.log(path.resolve(dataFolder, fileName) + " written");
-					}
-				});
-			} else {
-				self.sendSocketNotification("PLAYTIME_UPDATE_ERROR", "Got status code " + response.statusCode + " from API");
+		}).then(response => {
+			if (response.status != 200) {
+				throw new Error(response.status + ": " + response.statusText);
 			}
+			return response.json();
+		}).then(data => {
+			let forDate = self.key(moment().subtract(1, 'days'));
+			let fileName = forDate + ".json";
+			
+			data.date = forDate;
+			
+			fs.writeFile(path.resolve(dataFolder, fileName), JSON.stringify(data), function(err) {
+				if (err) {
+					self.sendSocketNotification("PLAYTIME_UPDATE_ERROR", "Could not write file " + path.resolve(dataFolder, fileName));						
+				} else {
+					console.log(path.resolve(dataFolder, fileName) + " written");
+				}
+			});
+		}).catch(err => {
+			self.sendSocketNotification("PLAYTIME_UPDATE_ERROR", "Got " + err.message + " from API");
 		});   
 	},
 
