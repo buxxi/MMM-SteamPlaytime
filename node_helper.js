@@ -72,18 +72,27 @@ module.exports = NodeHelper.create({
 
 	sendResult: function(data, steamId, count) {
 		var self = this;
+
+		let calculator = new PlaytimeCalculator(data, self.key);
+		let result = self.buildResult(calculator, count);
+		
+		self.sendSocketNotification("PLAYTIME", {
+			playtime : result,
+			steamId : steamId
+		});
+	},
+
+	buildResult: function(calculator, count) {
+		var self = this;
 		var result = {};
 		var date = moment().subtract(1, "days").startOf("day");
 
 		for (var i = 0; i < count; i++) {
 			var previousDate = date.clone().subtract(1, 'days');
-			result[self.key(date)] = self.getAllPlaytime(data, date, previousDate);
+			result[self.key(date)] = calculator.getAllPlaytime(date, previousDate);
 			date = previousDate;
 		}
-		self.sendSocketNotification("PLAYTIME", {
-			playtime : result,
-			steamId : steamId
-		});
+		return result;
 	},
 
 	updateData: function(dataFolder, apiKey, steamId) {
@@ -116,71 +125,6 @@ module.exports = NodeHelper.create({
 		});   
 	},
 
-	getAllPlaytime: function(data, date, previousDate) {
-		var self = this;
-		var result = {};
-		for (appid in data) {
-			var time = 0;
-			if (self.startedToPlay(data, appid, date, previousDate)) {
-				time = data[appid].recently[self.key(date)];
-			} else {
-				var dateTotalTime = self.getGameTotalTime(data, appid, date);
-				var previousDateTotalTime = self.getGameTotalTime(data, appid, previousDate);
-				time = dateTotalTime - previousDateTotalTime;
-			}
-			if (time !== 0) {
-				result[appid] = {
-					icon: data[appid].icon,
-					time: time
-				}
-			}
-		}
-		return result;
-	},
-
-	startedToPlay: function(data, appid, date, previousDate) {
-		var self = this;
-		var key = self.key(date);
-		var previousKey = self.key(previousDate);
-		
-		var min = self.getFirstDate(data);
-		if (date.isSame(min)) {
-			return false;
-		}
-
-		return (key in data[appid].recently && !(previousKey in data[appid].recently));
-	},
-
-	getGameTotalTime: function(data, appid, date, defaultValue) {
-		var self = this;
-		var key = self.key(date);
-		if (key in data[appid].total) {
-			return data[appid].total[key];	
-		}
-
-		if (!isNaN(defaultValue)) {
-			return defaultValue;
-		}
-		
-		var min = self.getFirstDate(data);
-		if (date.isAfter(min)) {
-			return self.getGameTotalTime(data, appid, date.clone().subtract(1, 'days'));
-		} else {
-			return self.getGameTotalTime(data, appid, min, 0);
-		}
-	},
-
-
-	getFirstDate: function(data) {
-		return moment.min(Object.values(data).flatMap(function(e) { 
-			return Object.keys(e.total); 
-		}).map(
-			function(e) { 
-				return moment(e);
-			}
-		));
-	},
-
 	key: function(date) {
 		return date.format("YYYY-MM-DD");
 	},
@@ -201,3 +145,71 @@ module.exports = NodeHelper.create({
 		return date;
 	}
 });
+
+class PlaytimeCalculator {
+	constructor(data, dateKeyFormatter) {
+		this.data = data;
+		this.dateKeyFormatter = dateKeyFormatter;
+		this.firstDate = this.getFirstDate(data);
+	}
+
+	getAllPlaytime(date, previousDate) {
+		var result = {};
+		for (let appid in this.data) {
+			var time = 0;
+			if (this.startedToPlay(appid, date, previousDate)) {
+				time = this.data[appid].recently[self.key(date)];
+			} else {
+				let dateTotalTime = this.getGameTotalTime(appid, date);
+				let previousDateTotalTime = this.getGameTotalTime(appid, previousDate);
+				time = dateTotalTime - previousDateTotalTime;
+			}
+			if (time !== 0) {
+				result[appid] = {
+					icon: this.data[appid].icon,
+					time: time
+				}
+			}
+		}
+		return result;
+	}
+
+
+	startedToPlay(appid, date, previousDate) {
+		let key = this.dateKeyFormatter(date);
+		let previousKey = this.dateKeyFormatter(previousDate);
+		
+		if (date.isSame(this.firstDate)) {
+			return false;
+		}
+
+		return (key in this.data[appid].recently && !(previousKey in this.data[appid].recently));
+	}
+
+	getGameTotalTime(appid, date, defaultValue) {
+		let key = this.dateKeyFormatter(date);
+		if (key in this.data[appid].total) {
+			return this.data[appid].total[key];	
+		}
+
+		if (!isNaN(defaultValue)) {
+			return defaultValue;
+		}
+		
+		if (date.isAfter(this.firstDate)) {
+			return this.getGameTotalTime(appid, date.clone().subtract(1, 'days'));
+		} else {
+			return this.getGameTotalTime(appid, this.firstDate, 0);
+		}
+	}
+
+	getFirstDate() {
+		return moment.min(Object.values(this.data).flatMap(function(e) { 
+			return Object.keys(e.total); 
+		}).map(
+			function(e) { 
+				return moment(e);
+			}
+		));
+	}
+}
