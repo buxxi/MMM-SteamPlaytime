@@ -53,18 +53,22 @@ module.exports = NodeHelper.create({
 	loadCachedData: function(dataFolder) {
 		var data = {};
 		fs.readdirSync(dataFolder).forEach(function(file) {
-			var json = JSON.parse(fs.readFileSync(path.resolve(dataFolder, file)));
-			json.response.games.forEach(function(game) {
-				if (!(game.appid in data)) {
-					data[game.appid] = {
-						icon: "http://media.steampowered.com/steamcommunity/public/images/apps/" + game.appid + "/" + game.img_icon_url + ".jpg",
-						total: {},
-						recently: {}
+			try {
+				var json = JSON.parse(fs.readFileSync(path.resolve(dataFolder, file)));
+				json.response.games.forEach(function(game) {
+					if (!(game.appid in data)) {
+						data[game.appid] = {
+							icon: "http://media.steampowered.com/steamcommunity/public/images/apps/" + game.appid + "/" + game.img_icon_url + ".jpg",
+							total: {},
+							recently: {}
+						}
 					}
-				}
-				data[game.appid].total[json.date] = game.playtime_forever;
-				data[game.appid].recently[json.date] = game.playtime_2weeks;
-			});
+					data[game.appid].total[json.date] = game.playtime_forever;
+					data[game.appid].recently[json.date] = game.playtime_2weeks;
+				});
+			} catch (e) {
+				console.log("Could not load data from " + file);
+			}
 		});
 
 		return data;
@@ -114,7 +118,7 @@ module.exports = NodeHelper.create({
 			
 			data.date = forDate;
 			
-			fs.writeFile(path.resolve(dataFolder, fileName), JSON.stringify(data), function(err) {
+			fs.writeFileSync(path.resolve(dataFolder, fileName), JSON.stringify(data), function(err) {
 				if (err) {
 					self.sendSocketNotification("PLAYTIME_UPDATE_ERROR", "Could not write file " + path.resolve(dataFolder, fileName));						
 				} else {
@@ -159,7 +163,7 @@ class PlaytimeCalculator {
 		for (let appid in this.data) {
 			var time = 0;
 			if (this.startedToPlay(appid, date, previousDate)) {
-				time = this.data[appid].recently[self.key(date)];
+				time = this.data[appid].recently[this.dateKeyFormatter(date)];
 			} else {
 				let dateTotalTime = this.getGameTotalTime(appid, date);
 				let previousDateTotalTime = this.getGameTotalTime(appid, previousDate);
