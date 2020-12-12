@@ -18,7 +18,7 @@
   header: "Time spent on games",
   config: {
     apiKey: <apikey for steam>,
-	steamId: <steamid64 for user>,
+    steamId: <steamid64 for user>
   }
 },
 ```
@@ -29,6 +29,7 @@
 - ``steamId`` : The SteamID64 for the user to track, required, see Installation instructions
 - ``daysCount`` : The amount of previous days to display, defaults to 5
 - ``gamesCount`` : The maximum amount of games to display per day, defaults to 5
+- ``excludeGames`` : An array of appids that should be excluded from being displayed (e.g [570] excludes Dota 2), default is []
 - ``updateTime`` : The time of day when the data should be fetched for the previous day, defaults to "00:00" (midnight) in the format of "HH:mm"
 - ``language`` : The language to use for time formatting, defaults to MagicMirror default
 

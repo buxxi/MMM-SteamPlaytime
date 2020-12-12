@@ -5,6 +5,7 @@ Module.register("MMM-SteamPlaytime",{
 		updateTime: "00:00",
 		daysCount: 5,
 		gamesCount: 5,
+		excludeGames: [],
 		language: config.language
 	},
 

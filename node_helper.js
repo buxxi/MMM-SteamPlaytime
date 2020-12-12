@@ -22,7 +22,7 @@ module.exports = NodeHelper.create({
 
 				var callback = function() {
 					self.updateData(dataFolder, payload.apiKey, payload.steamId).then(() => {
-						let data = self.loadCachedData(dataFolder);
+						let data = self.loadCachedData(dataFolder, payload.exludeGames);
 
 						self.sendResult(data, payload.steamId, payload.daysCount, payload.gamesCount);
 						self.scheduleNextUpdate(payload.updateTime, callback);
@@ -33,7 +33,7 @@ module.exports = NodeHelper.create({
 				self.configured = true;
 			}
 
-			var data = self.loadCachedData(dataFolder);
+			var data = self.loadCachedData(dataFolder, payload.excludeGames);
 			self.sendResult(data, payload.steamId, payload.daysCount, payload.gamesCount);
 		}
 	},
@@ -50,12 +50,15 @@ module.exports = NodeHelper.create({
 		}, timeout);
 	},
 
-	loadCachedData: function(dataFolder) {
+	loadCachedData: function(dataFolder, excludeAppIds) {
 		var data = {};
 		fs.readdirSync(dataFolder).forEach(function(file) {
 			try {
 				var json = JSON.parse(fs.readFileSync(path.resolve(dataFolder, file)));
 				json.response.games.forEach(function(game) {
+					if (excludeAppIds.indexOf(game.appid) >= 0) {
+						return;
+					}
 					if (!(game.appid in data)) {
 						data[game.appid] = {
 							icon: "http://media.steampowered.com/steamcommunity/public/images/apps/" + game.appid + "/" + game.img_icon_url + ".jpg",
