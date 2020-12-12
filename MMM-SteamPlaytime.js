@@ -4,8 +4,7 @@ Module.register("MMM-SteamPlaytime",{
 		steamId: null,
 		updateTime: "00:00",
 		displayCount: 5,
-		language: config.language,
-		emptyText: "none"
+		language: config.language
 	},
 
 	start: function() {
@@ -15,10 +14,6 @@ Module.register("MMM-SteamPlaytime",{
 		moment.locale(self.config.language);
 
 		self.sendSocketNotification("CONFIG", self.config);
-	},
-
-	notificationReceived: function(notification, payload, sender) {
-
 	},
 
 	getScripts: function() {
@@ -33,13 +28,19 @@ Module.register("MMM-SteamPlaytime",{
 		return "MMM-SteamPlaytime.njk";
 	},
 
+	getTranslations: function() {
+		return {
+				sv: "translations/sv.json",
+				en: "translations/en.json"
+		};
+	},
+
 	getTemplateData: function () {
 		var self = this;
 		return {
 			formatDay: self.formatDay,
 			formatTime: self.formatTime,
-			playtime: self.templateData.playtime,
-			emptyText: self.config.emptyText
+			playtime: self.templateData.playtime
 		}
 	},
 

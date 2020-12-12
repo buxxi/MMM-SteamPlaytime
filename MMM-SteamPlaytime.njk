@@ -9,7 +9,7 @@
 		<img src="{{app.icon}}"/> {{formatTime(app.time)}}
 	</td>
 	{% else %}
-	<td class="dimmed">{{emptyText}}</td>
+	<td class="dimmed">{{"NO_PLAYTIME" | translate }}</td>
 	{% endfor %}
 </tr>
 {% endfor %}

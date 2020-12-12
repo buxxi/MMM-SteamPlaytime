@@ -30,7 +30,6 @@
 - ``displayCount`` : The amount of previous days to display, defaults to 5
 - ``updateTime`` : The time of day when the data should be fetched for the previous day, defaults to "00:00" (midnight) in the format of "HH:mm"
 - ``language`` : The language to use for time formatting, defaults to MagicMirror default
-- ``emptyText`` : The value that should be displayed for days without any games played, defaults to "none"
 
 
 
