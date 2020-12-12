@@ -42,7 +42,8 @@ Module.register("MMM-SteamPlaytime",{
 		return {
 			formatDay: self.formatDay,
 			formatTime: self.formatTime,
-			playtime: self.templateData.playtime
+			playtime: self.templateData.playtime,
+			tracking: self.translate("PLAYTIME_TRACKING", {"days" : "" + self.templateData.days, "games" : "" + self.templateData.games})
 		}
 	},
 

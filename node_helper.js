@@ -85,7 +85,9 @@ module.exports = NodeHelper.create({
 		
 		self.sendSocketNotification("PLAYTIME", {
 			playtime : result,
-			steamId : steamId
+			steamId : steamId,
+			days : calculator.getUniqueDaysCount(),
+			games : calculator.getUniqueGamesCount()
 		});
 	},
 
@@ -99,6 +101,7 @@ module.exports = NodeHelper.create({
 			result[self.key(date)] = calculator.getAllPlaytime(date, previousDate, gamesCount);
 			date = previousDate;
 		}
+
 		return result;
 	},
 
@@ -212,5 +215,17 @@ class PlaytimeCalculator {
 
 	getFirstDate(data) {
 		return moment(Object.values(data).flatMap(e => Object.keys(e.total)).reduce((a, b) => a < b ? a : b, moment()));
+	}
+
+	getUniqueDaysCount() {
+		return new Set(Object.values(this.data).flatMap(e => Object.keys(e.total))).size;
+	}
+
+	getUniqueGamesCount() {
+		return Object.values(this.data).filter(game => {
+			let min = Math.min(...Object.values(game.total));
+			let max = Math.max(...Object.values(game.total));
+			return min != max;
+		}).length;
 	}
 }

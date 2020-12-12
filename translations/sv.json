@@ -1,3 +1,4 @@
 {
-    "NO_PLAYTIME" : "inget"
+    "NO_PLAYTIME" : "inget",
+    "PLAYTIME_TRACKING" : "{games} olika spel spelade över {days} dagar"
 }
