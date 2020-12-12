@@ -24,7 +24,7 @@ module.exports = NodeHelper.create({
 					self.updateData(dataFolder, payload.apiKey, payload.steamId).then(() => {
 						let data = self.loadCachedData(dataFolder);
 
-						self.sendResult(data, payload.steamId, payload.displayCount);
+						self.sendResult(data, payload.steamId, payload.daysCount, payload.gamesCount);
 						self.scheduleNextUpdate(payload.updateTime, callback);
 					});
 				};
@@ -34,7 +34,7 @@ module.exports = NodeHelper.create({
 			}
 
 			var data = self.loadCachedData(dataFolder);
-			self.sendResult(data, payload.steamId, payload.displayCount);
+			self.sendResult(data, payload.steamId, payload.daysCount, payload.gamesCount);
 		}
 	},
 
@@ -74,11 +74,11 @@ module.exports = NodeHelper.create({
 		return data;
 	},
 
-	sendResult: function(data, steamId, count) {
+	sendResult: function(data, steamId, daysCount, gamesCount) {
 		var self = this;
 
 		let calculator = new PlaytimeCalculator(data, self.key);
-		let result = self.buildResult(calculator, count);
+		let result = self.buildResult(calculator, daysCount, gamesCount);
 		
 		self.sendSocketNotification("PLAYTIME", {
 			playtime : result,
@@ -86,14 +86,14 @@ module.exports = NodeHelper.create({
 		});
 	},
 
-	buildResult: function(calculator, count) {
+	buildResult: function(calculator, daysCount, gamesCount) {
 		var self = this;
 		var result = {};
 		var date = moment().subtract(1, "days").startOf("day");
 
-		for (var i = 0; i < count; i++) {
+		for (var i = 0; i < daysCount; i++) {
 			var previousDate = date.clone().subtract(1, 'days');
-			result[self.key(date)] = calculator.getAllPlaytime(date, previousDate);
+			result[self.key(date)] = calculator.getAllPlaytime(date, previousDate, gamesCount);
 			date = previousDate;
 		}
 		return result;
@@ -158,8 +158,8 @@ class PlaytimeCalculator {
 		this.firstDate = this.getFirstDate(data);
 	}
 
-	getAllPlaytime(date, previousDate) {
-		var result = {};
+	getAllPlaytime(date, previousDate, gamesCount) {
+		var result = [];
 		for (let appid in this.data) {
 			if (!this.startedToPlay(appid, date)) {
 				let dateTotalTime = this.getGameTotalTime(appid, date);
@@ -167,14 +167,15 @@ class PlaytimeCalculator {
 				var time = dateTotalTime - previousDateTotalTime;
 			
 				if (time !== 0) {
-					result[appid] = {
+					result.push({
+						appid : appid,
 						icon: this.data[appid].icon,
 						time: time
-					}
+					})
 				}
 			}
 		}
-		return result;
+		return result.sort((a, b) => b.time - a.time).slice(0, gamesCount);
 	}
 
 

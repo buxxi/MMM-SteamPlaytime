@@ -4,7 +4,7 @@
 	<td class="day">
 		{{formatDay(date)}}
 	</td>
-	{% for appid, app in games %}
+	{% for app in games %}
 	<td class="playtime">
 		<img src="{{app.icon}}"/> {{formatTime(app.time)}}
 	</td>

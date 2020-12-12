@@ -3,7 +3,8 @@ Module.register("MMM-SteamPlaytime",{
 		apiKey: null,
 		steamId: null,
 		updateTime: "00:00",
-		displayCount: 5,
+		daysCount: 5,
+		gamesCount: 5,
 		language: config.language
 	},
 
