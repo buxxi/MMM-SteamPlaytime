@@ -161,18 +161,16 @@ class PlaytimeCalculator {
 	getAllPlaytime(date, previousDate) {
 		var result = {};
 		for (let appid in this.data) {
-			var time = 0;
-			if (this.startedToPlay(appid, date)) {
-				time = this.data[appid].recently[this.dateKeyFormatter(date)];
-			} else {
+			if (!this.startedToPlay(appid, date)) {
 				let dateTotalTime = this.getGameTotalTime(appid, date);
 				let previousDateTotalTime = this.getGameTotalTime(appid, previousDate);
-				time = dateTotalTime - previousDateTotalTime;
-			}
-			if (time !== 0) {
-				result[appid] = {
-					icon: this.data[appid].icon,
-					time: time
+				var time = dateTotalTime - previousDateTotalTime;
+			
+				if (time !== 0) {
+					result[appid] = {
+						icon: this.data[appid].icon,
+						time: time
+					}
 				}
 			}
 		}
