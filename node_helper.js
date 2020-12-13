@@ -22,7 +22,7 @@ module.exports = NodeHelper.create({
 
 				var callback = function() {
 					self.updateData(dataFolder, payload.apiKey, payload.steamId).then(() => {
-						let data = self.loadCachedData(dataFolder, payload.exludeGames);
+						let data = self.loadCachedData(dataFolder, payload.excludeGames);
 
 						self.sendResult(data, payload.steamId, payload.daysCount, payload.gamesCount);
 						self.scheduleNextUpdate(payload.updateTime, callback);
@@ -70,7 +70,7 @@ module.exports = NodeHelper.create({
 					data[game.appid].recently[json.date] = game.playtime_2weeks;
 				});
 			} catch (e) {
-				console.log("Could not load data from " + file);
+				console.log("Could not load data from " + file + ", error: " + e);
 			}
 		});
 
