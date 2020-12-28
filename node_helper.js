@@ -167,18 +167,20 @@ class PlaytimeCalculator {
 	getAllPlaytime(date, previousDate, gamesCount) {
 		var result = [];
 		for (let appid in this.data) {
-			if (!this.startedToPlay(appid, date)) {
+			var time = 0;
+			if (this.startedToPlay(appid, date)) {
+				time = this.getGameRecentTime(appid, date);
+			} else {
 				let dateTotalTime = this.getGameTotalTime(appid, date);
 				let previousDateTotalTime = this.getGameTotalTime(appid, previousDate);
-				var time = dateTotalTime - previousDateTotalTime;
-			
-				if (time !== 0) {
-					result.push({
-						appid : appid,
-						icon: this.data[appid].icon,
-						time: time
-					})
-				}
+				time = dateTotalTime - previousDateTotalTime;
+			}
+			if (time !== 0) {
+				result.push({
+					appid : appid,
+					icon: this.data[appid].icon,
+					time: time
+				})
 			}
 		}
 		return result.sort((a, b) => b.time - a.time).slice(0, gamesCount);
@@ -194,6 +196,14 @@ class PlaytimeCalculator {
 
 		let firstKey = Object.keys(this.data[appid].recently).reduce((a, b) => a < b ? a : b);
 		return key == firstKey;
+	}
+
+	getGameRecentTime(appid, date) {
+		let key = this.dateKeyFormatter(date);
+		if (key in this.data[appid].recently && date.isAfter(this.firstDate)) {
+			return this.data[appid].recently[key];	
+		}	
+		return 0;
 	}
 
 	getGameTotalTime(appid, date, defaultValue) {
