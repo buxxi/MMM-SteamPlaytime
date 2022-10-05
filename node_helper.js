@@ -2,38 +2,36 @@ const NodeHelper = require("node_helper");
 const fetch = require("node-fetch");
 const moment = require("moment");
 const path = require("path");
-const fs = require("fs");
+const fs = require("fs/promises");
 
 module.exports = NodeHelper.create({
 	configured: false,
 
 	start: function() {},
 
-	socketNotificationReceived: function(notification, payload) {
-		var self = this;
+	socketNotificationReceived: async function(notification, payload) {
+		let self = this;
 		if (notification == "CONFIG") {
-			var dataFolder = path.resolve(__dirname, "data", payload.steamId);
+			let dataFolder = path.resolve(__dirname, "data", payload.steamId);
 			if (!self.configured) {
-				if (!fs.existsSync(dataFolder)) {
-					fs.mkdirSync(dataFolder, { recursive: true }, function(err) {
-						console.log("Failed to create directory " + dataFolder);
-					});
+				try {
+					await fs.mkdir(dataFolder, { recursive: true });
+				} catch (e) {
+					console.log("Failed to create directory " + dataFolder);
 				}
 
-				var callback = function() {
-					self.updateData(dataFolder, payload.apiKey, payload.steamId).then(() => {
-						let data = self.loadCachedData(dataFolder, payload.excludeGames);
-
-						self.sendResult(data, payload.steamId, payload.daysCount, payload.gamesCount);
-						self.scheduleNextUpdate(payload.updateTime, callback);
-					});
+				let callback = async function() {
+					await self.updateData(dataFolder, payload.apiKey, payload.steamId);
+					
+					let data = await self.loadCachedData(dataFolder, payload.excludeGames);
+					self.sendResult(data, payload.steamId, payload.daysCount, payload.gamesCount);
 				};
 				self.scheduleNextUpdate(payload.updateTime, callback);
 
 				self.configured = true;
 			}
 
-			var data = self.loadCachedData(dataFolder, payload.excludeGames);
+			let data = await self.loadCachedData(dataFolder, payload.excludeGames);
 			self.sendResult(data, payload.steamId, payload.daysCount, payload.gamesCount);
 		}
 	},
@@ -45,16 +43,19 @@ module.exports = NodeHelper.create({
 
 		console.log("Next update at " + date.format("YYYY-MM-DD HH:mm:ss"));
 
-		setTimeout(function() {
-			callback();
+		setTimeout(async function() {
+			await callback();
+			self.scheduleNextUpdate(updateTime, callback);
 		}, timeout);
 	},
 
-	loadCachedData: function(dataFolder, excludeAppIds) {
+	loadCachedData: async function(dataFolder, excludeAppIds) {
 		var data = {};
-		fs.readdirSync(dataFolder).forEach(function(file) {
+		let files = await fs.readdir(dataFolder);
+
+		for (file of files) {
 			try {
-				var json = JSON.parse(fs.readFileSync(path.resolve(dataFolder, file)));
+				var json = JSON.parse(await fs.readFile(path.resolve(dataFolder, file)));
 				json.response.games.forEach(function(game) {
 					if (excludeAppIds.indexOf(game.appid) >= 0) {
 						return;
@@ -72,13 +73,13 @@ module.exports = NodeHelper.create({
 			} catch (e) {
 				console.log("Could not load data from " + file + ", error: " + e);
 			}
-		});
+		};
 
 		return data;
 	},
 
 	sendResult: function(data, steamId, daysCount, gamesCount) {
-		var self = this;
+		let self = this;
 
 		let calculator = new PlaytimeCalculator(data, self.key);
 		let result = self.buildResult(calculator, daysCount, gamesCount);
@@ -92,12 +93,12 @@ module.exports = NodeHelper.create({
 	},
 
 	buildResult: function(calculator, daysCount, gamesCount) {
-		var self = this;
-		var result = {};
+		let self = this;
+		let result = {};
 		var date = moment().subtract(1, "days").startOf("day");
 
-		for (var i = 0; i < daysCount; i++) {
-			var previousDate = date.clone().subtract(1, 'days');
+		for (let i = 0; i < daysCount; i++) {
+			let previousDate = date.clone().subtract(1, 'days');
 			result[self.key(date)] = calculator.getAllPlaytime(date, previousDate, gamesCount);
 			date = previousDate;
 		}
@@ -105,35 +106,43 @@ module.exports = NodeHelper.create({
 		return result;
 	},
 
-	updateData: function(dataFolder, apiKey, steamId) {
+	updateData: async function(dataFolder, apiKey, steamId) {
 		let self = this;
-		return fetch("http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key=" + apiKey + "&steamid=" + steamId + "&format=json",
-			{
-			method : "GET",
-			headers : {
-				"User-Agent" : "MagicMirror/MMM-SteamPlaytime/1.0; (https://github.com/buxxi/MMM-SteamPlaytime)"
-			}
-		}).then(response => {
+
+		let data = await self.fetchData(apiKey, steamId);
+		let forDate = self.key(moment().subtract(1, 'days'));
+		let fileName = forDate + ".json";
+		let filePath = path.resolve(dataFolder, fileName);
+		
+		data.date = forDate;
+		
+		try {
+			fs.writeFile(filePath, JSON.stringify(data));
+			console.log(filePath + " written");
+		} catch (err) {
+			self.sendSocketNotification("PLAYTIME_UPDATE_ERROR", "Could not write file " + filePath);						
+		};
+ 
+	},
+
+	fetchData: async function(apiKey, steamId) {
+		try {
+			let response = await fetch("http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key=" + apiKey + "&steamid=" + steamId + "&format=json",
+				{
+					method : "GET",
+					headers : {
+						"User-Agent" : "MagicMirror/MMM-SteamPlaytime/1.0; (https://github.com/buxxi/MMM-SteamPlaytime)"
+					}
+				}
+			);
+		
 			if (response.status != 200) {
 				throw new Error(response.status + ": " + response.statusText);
 			}
-			return response.json();
-		}).then(data => {
-			let forDate = self.key(moment().subtract(1, 'days'));
-			let fileName = forDate + ".json";
-			
-			data.date = forDate;
-			
-			fs.writeFileSync(path.resolve(dataFolder, fileName), JSON.stringify(data), function(err) {
-				if (err) {
-					self.sendSocketNotification("PLAYTIME_UPDATE_ERROR", "Could not write file " + path.resolve(dataFolder, fileName));						
-				} else {
-					console.log(path.resolve(dataFolder, fileName) + " written");
-				}
-			});
-		}).catch(err => {
+			return await response.json();
+		} catch(err) {
 			self.sendSocketNotification("PLAYTIME_UPDATE_ERROR", "Got " + err.message + " from API");
-		});   
+		};   
 	},
 
 	key: function(date) {
@@ -141,7 +150,7 @@ module.exports = NodeHelper.create({
 	},
 
 	calculateNextUpdate(updateTime) {
-		var date = moment();
+		let date = moment();
 
 		updateTime = updateTime.split(":").map(function(e) { return parseInt(e)});
 		date.set({
