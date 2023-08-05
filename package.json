@@ -5,6 +5,6 @@
   "description": "A module for Magic Mirror that displays previous days playtime for a user on steam",
   "dependencies": {
     "moment": "^2.29.4",
-    "node-fetch": "^2.6.7"
+    "node-fetch": "^2.6.12"
   }
 }
