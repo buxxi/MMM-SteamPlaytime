@@ -53,7 +53,7 @@ module.exports = NodeHelper.create({
 		var data = {};
 		let files = await fs.readdir(dataFolder);
 
-		for (file of files) {
+		for (let file of files) {
 			try {
 				var json = JSON.parse(await fs.readFile(path.resolve(dataFolder, file)));
 				json.response.games.forEach(function(game) {
@@ -63,12 +63,10 @@ module.exports = NodeHelper.create({
 					if (!(game.appid in data)) {
 						data[game.appid] = {
 							icon: "http://media.steampowered.com/steamcommunity/public/images/apps/" + game.appid + "/" + game.img_icon_url + ".jpg",
-							total: {},
-							recently: {}
+							total: {}
 						}
 					}
 					data[game.appid].total[json.date] = game.playtime_forever;
-					data[game.appid].recently[json.date] = game.playtime_2weeks;
 				});
 			} catch (e) {
 				console.log("Could not load data from " + file + ", error: " + e);
@@ -83,7 +81,7 @@ module.exports = NodeHelper.create({
 
 		let calculator = new PlaytimeCalculator(data, self.key);
 		let result = self.buildResult(calculator, daysCount, gamesCount);
-		
+
 		self.sendSocketNotification("PLAYTIME", {
 			playtime : result,
 			steamId : steamId,
@@ -99,7 +97,7 @@ module.exports = NodeHelper.create({
 
 		for (let i = 0; i < daysCount; i++) {
 			let previousDate = date.clone().subtract(1, 'days');
-			result[self.key(date)] = calculator.getAllPlaytime(date, previousDate, gamesCount);
+			result[self.key(date)] = calculator.getAllPlaytime(date, gamesCount);
 			date = previousDate;
 		}
 
@@ -117,7 +115,7 @@ module.exports = NodeHelper.create({
 		data.date = forDate;
 		
 		try {
-			fs.writeFile(filePath, JSON.stringify(data));
+			await fs.writeFile(filePath, JSON.stringify(data));
 			console.log(filePath + " written");
 		} catch (err) {
 			self.sendSocketNotification("PLAYTIME_UPDATE_ERROR", "Could not write file " + filePath);						
@@ -173,62 +171,39 @@ class PlaytimeCalculator {
 		this.firstDate = this.getFirstDate(data);
 	}
 
-	getAllPlaytime(date, previousDate, gamesCount) {
+	getAllPlaytime(date, gamesCount) {
 		var result = [];
 		for (let appid in this.data) {
-			var time = 0;
-			if (this.startedToPlay(appid, date)) {
-				time = this.getGameRecentTime(appid, date);
-			} else {
-				let dateTotalTime = this.getGameTotalTime(appid, date);
-				let previousDateTotalTime = this.getGameTotalTime(appid, previousDate);
-				time = dateTotalTime - previousDateTotalTime;
-			}
-			if (time !== 0) {
-				result.push({
-					appid : appid,
-					icon: this.data[appid].icon,
-					time: time
-				})
+			//Find the playtime for that current date, if not found the json-file is probably missing for that day, no need to backtrack further
+			let dateTotalTime = this.getGameTotalTime(appid, date, date);
+			if (dateTotalTime > 0) {
+				//If the current day has any playtime backtrack possibly all the way to the first day that has the data set to calculate the delta
+				let previousDateTotalTime = this.getGameTotalTime(appid, date.clone().subtract(1, 'days'), this.firstDate);
+				let time = dateTotalTime - previousDateTotalTime;
+
+				if (time !== 0) {
+					result.push({
+						appid : appid,
+						icon: this.data[appid].icon,
+						time: time
+					})
+				}
 			}
 		}
 		return result.sort((a, b) => b.time - a.time).slice(0, gamesCount);
 	}
 
-
-	startedToPlay(appid, date) {
+	getGameTotalTime(appid, date, stopAtDate) {
 		let key = this.dateKeyFormatter(date);
-		
-		if (!key in this.data[appid].recently) {
-			return false;
-		}
 
-		let firstKey = Object.keys(this.data[appid].recently).reduce((a, b) => a < b ? a : b);
-		return key == firstKey;
-	}
-
-	getGameRecentTime(appid, date) {
-		let key = this.dateKeyFormatter(date);
-		if (key in this.data[appid].recently && date.isAfter(this.firstDate)) {
-			return this.data[appid].recently[key];	
-		}	
-		return 0;
-	}
-
-	getGameTotalTime(appid, date, defaultValue) {
-		let key = this.dateKeyFormatter(date);
 		if (key in this.data[appid].total) {
 			return this.data[appid].total[key];	
 		}
 
-		if (!isNaN(defaultValue)) {
-			return defaultValue;
-		}
-		
-		if (date.isAfter(this.firstDate)) {
-			return this.getGameTotalTime(appid, date.clone().subtract(1, 'days'));
+		if (stopAtDate.isBefore(date)) {
+			return this.getGameTotalTime(appid, date.clone().subtract(1, 'days'), stopAtDate);
 		} else {
-			return this.getGameTotalTime(appid, this.firstDate, 0);
+			return 0;
 		}
 	}
 
