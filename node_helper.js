@@ -124,6 +124,7 @@ module.exports = NodeHelper.create({
 	},
 
 	fetchData: async function(apiKey, steamId) {
+		let self = this;
 		try {
 			let response = await fetch("http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key=" + apiKey + "&steamid=" + steamId + "&format=json",
 				{
