@@ -7,6 +7,7 @@
     "url": "https://github.com/buxxi/MMM-SteamPlaytime.git"
   },
   "description": "A module for Magic Mirror that displays previous days playtime for a user on steam",
+  "license": "MIT",
   "dependencies": {
     "moment": "^2.29.4"
   }
