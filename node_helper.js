@@ -1,5 +1,4 @@
 const NodeHelper = require("node_helper");
-const fetch = require("node-fetch");
 const moment = require("moment");
 const path = require("path");
 const fs = require("fs/promises");
